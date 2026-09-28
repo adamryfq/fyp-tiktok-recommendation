@@ -20,6 +20,8 @@ VIDEOS = [
     {"title": "Dance Trend Remix", "category": "Dance", "likes": 19800},
 ]
 CATEGORIES = ["Cooking", "Comedy", "Dance"]
+INTEREST_WEIGHT = 3
+OTHER_WEIGHT = 1
 
 
 def show_welcome_banner():
@@ -53,8 +55,9 @@ def get_user_interest():
         print(f"Please enter a number between 1 and {len(CATEGORIES)}.")
 
 
-def get_next_action():
-    print("\n1. Like   2. Scroll   3. Close")
+def get_next_action(is_liked):
+    like_label = "Unlike" if is_liked else "Like"
+    print(f"\n1. {like_label}   2. Scroll   3. Close")
     while True:
         choice = input("Choose an action (1-3): ").strip()
         if choice == "1":
@@ -72,10 +75,24 @@ def build_initial_queue(interest):
     return matches
 
 
-def get_next_video(queue):
+def get_interests(original_interest, liked_videos):
+    interests = {original_interest}
+    for video in liked_videos:
+        interests.add(video["category"])
+    return interests
+
+
+def get_next_video(queue, interests):
     if queue:
         return queue.pop(0)
-    return random.choice(VIDEOS)
+
+    weights = []
+    for video in VIDEOS:
+        if video["category"] in interests:
+            weights.append(INTEREST_WEIGHT)
+        else:
+            weights.append(OTHER_WEIGHT)
+    return random.choices(VIDEOS, weights=weights, k=1)[0]
 
 
 def display_video(video):
@@ -86,29 +103,47 @@ def display_video(video):
     print(f"Likes:    {video['likes']:,}")
 
 
-def like_video(video):
-    video["likes"] += 1
-    print(f"You liked \"{video['title']}\"! Now at {video['likes']:,} likes.")
+def toggle_like(video, liked_videos):
+    if video in liked_videos:
+        liked_videos.remove(video)
+        video["likes"] -= 1
+        print(f"You unliked \"{video['title']}\". Now at {video['likes']:,} likes.")
+    else:
+        liked_videos.append(video)
+        video["likes"] += 1
+        print(f"You liked \"{video['title']}\"! Now at {video['likes']:,} likes.")
+
+
+def report_interest_changes(before, after):
+    for category in sorted(after - before):
+        print(f"'{category}' was added to your interests.")
+    for category in sorted(before - after):
+        print(f"'{category}' was removed from your interests.")
 
 
 def main():
     show_welcome_banner()
     interest = get_user_interest()
     queue = build_initial_queue(interest)
-    current_video = get_next_video(queue)
+    liked_videos = []
+    current_video = get_next_video(queue, get_interests(interest, liked_videos))
 
     while True:
         display_video(current_video)
-        action = get_next_action()
+        action = get_next_action(current_video in liked_videos)
         if action == "like":
-            like_video(current_video)
+            interests_before = get_interests(interest, liked_videos)
+            toggle_like(current_video, liked_videos)
+            interests_after = get_interests(interest, liked_videos)
+            report_interest_changes(interests_before, interests_after)
         elif action == "scroll":
-            current_video = get_next_video(queue)
+            interests = get_interests(interest, liked_videos)
+            current_video = get_next_video(queue, interests)
         elif action == "close":
             break
 
     print("\n=== Session ended ===")
-    print("Thanks for using the Tiktok!")
+    print("Thanks for using the FYP simulator!")
 
 
 if __name__ == "__main__":
