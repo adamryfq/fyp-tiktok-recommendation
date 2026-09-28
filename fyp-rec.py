@@ -5,6 +5,7 @@ An interactive program that simulates TikTok's interest-based
 video recommendation system.
 """
 
+import random
 import time
 
 VIDEOS = [
@@ -19,9 +20,23 @@ VIDEOS = [
     {"title": "Dance Trend Remix", "category": "Dance", "likes": 19800},
 ]
 CATEGORIES = ["Cooking", "Comedy", "Dance"]
+INTEREST_WEIGHT = 3
+OTHER_WEIGHT = 1
 
 
-def display_menu():
+def show_welcome_banner():
+    print("=" * 42)
+    print("        Welcome to TikTok!")
+    print("=" * 42)
+    print("How to use:")
+    print(" - You'll pick an interest to get started")
+    print(" - LIKE a video to see more like it")
+    print(" - SCROLL to see the next video")
+    print(" - CLOSE to end your session")
+    print("=" * 42)
+
+
+def display_interest_menu():
     print("\nWhat are you interested in?")
     for index, category in enumerate(CATEGORIES, start=1):
         print(f"{index}. {category}")
@@ -29,7 +44,7 @@ def display_menu():
 
 def get_user_interest():
     while True:
-        display_menu()
+        display_interest_menu()
         choice = input(f"Enter your choice (1-{len(CATEGORIES)}): ").strip()
         if not choice.isdigit():
             print("Invalid input. Please enter a number.")
@@ -40,32 +55,95 @@ def get_user_interest():
         print(f"Please enter a number between 1 and {len(CATEGORIES)}.")
 
 
-def get_recommendations(interest):
-    matches = [video for video in VIDEOS if video["category"] == interest]
-    matches.sort(key=lambda video: video["likes"], reverse=True)
+def get_next_action(is_liked):
+    like_label = "Unlike" if is_liked else "Like"
+    print(f"\n1. {like_label}   2. Scroll   3. Close")
+    while True:
+        choice = input("Choose an action (1-3): ").strip()
+        if choice == "1":
+            return "like"
+        elif choice == "2":
+            return "scroll"
+        elif choice == "3":
+            return "close"
+        print("Invalid input. Please enter 1, 2, or 3.")
+
+
+def build_initial_queue(interest):
+    matches = [v for v in VIDEOS if v["category"] == interest]
+    matches.sort(key=lambda v: v["likes"], reverse=True)
     return matches
 
 
+def get_interests(original_interest, liked_videos):
+    interests = {original_interest}
+    for video in liked_videos:
+        interests.add(video["category"])
+    return interests
+
+
+def get_next_video(queue, interests):
+    if queue:
+        return queue.pop(0)
+
+    weights = []
+    for video in VIDEOS:
+        if video["category"] in interests:
+            weights.append(INTEREST_WEIGHT)
+        else:
+            weights.append(OTHER_WEIGHT)
+    return random.choices(VIDEOS, weights=weights, k=1)[0]
+
+
 def display_video(video):
-    print("\nNow playing...")
+    print("\nNow watching...")
     time.sleep(1)
     print(f"Title:    {video['title']}")
     print(f"Category: {video['category']}")
     print(f"Likes:    {video['likes']:,}")
 
 
-def display_recommendations(interest, recommendations):
-    print(f"\n--- Recommended for you: {interest} ---")
-    for video in recommendations:
-        display_video(video)
+def toggle_like(video, liked_videos):
+    if video in liked_videos:
+        liked_videos.remove(video)
+        video["likes"] -= 1
+        print(f"You unliked \"{video['title']}\". Now at {video['likes']:,} likes.")
+    else:
+        liked_videos.append(video)
+        video["likes"] += 1
+        print(f"You liked \"{video['title']}\"! Now at {video['likes']:,} likes.")
+
+
+def report_interest_changes(before, after):
+    for category in sorted(after - before):
+        print(f"'{category}' was added to your interests.")
+    for category in sorted(before - after):
+        print(f"'{category}' was removed from your interests.")
 
 
 def main():
-    print("=== Welcome to the FYP Recommendation Simulator ===")
+    show_welcome_banner()
     interest = get_user_interest()
-    recommendations = get_recommendations(interest)
-    display_recommendations(interest, recommendations)
-    print("\nThanks for watching! (End of simulation)")
+    queue = build_initial_queue(interest)
+    liked_videos = []
+    current_video = get_next_video(queue, get_interests(interest, liked_videos))
+
+    while True:
+        display_video(current_video)
+        action = get_next_action(current_video in liked_videos)
+        if action == "like":
+            interests_before = get_interests(interest, liked_videos)
+            toggle_like(current_video, liked_videos)
+            interests_after = get_interests(interest, liked_videos)
+            report_interest_changes(interests_before, interests_after)
+        elif action == "scroll":
+            interests = get_interests(interest, liked_videos)
+            current_video = get_next_video(queue, interests)
+        elif action == "close":
+            break
+
+    print("\n=== Session ended ===")
+    print("Thanks for using the FYP simulator!")
 
 
 if __name__ == "__main__":
