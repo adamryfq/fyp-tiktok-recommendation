@@ -57,16 +57,18 @@ def get_user_interest():
 
 def get_next_action(is_liked):
     like_label = "Unlike" if is_liked else "Like"
-    print(f"\n1. {like_label}   2. Scroll   3. Close")
+    print(f"\n1. {like_label}   2. Scroll   3. Liked videos   4. Close")
     while True:
-        choice = input("Choose an action (1-3): ").strip()
+        choice = input("Choose an action (1-4): ").strip()
         if choice == "1":
             return "like"
         elif choice == "2":
             return "scroll"
         elif choice == "3":
+            return "liked_videos"
+        elif choice == "4":
             return "close"
-        print("Invalid input. Please enter 1, 2, or 3.")
+        print("Invalid input. Please enter 1, 2, 3, or 4.")
 
 
 def build_initial_queue(interest):
@@ -121,6 +123,55 @@ def report_interest_changes(before, after):
         print(f"'{category}' was removed from your interests.")
 
 
+def display_liked_list(liked_videos):
+    print("\n--- Your liked videos ---")
+    for number, video in enumerate(liked_videos, start=1):
+        print(f"{number}. {video['title']} ({video['category']})")
+
+
+def get_liked_video_choice(total):
+    while True:
+        choice = input(f"Enter a number (1-{total}) to watch it, or 0 to go back to your feed: ").strip()
+        if not choice.isdigit():
+            print("Invalid input. Please enter a number.")
+            continue
+        choice_num = int(choice)
+        if 0 <= choice_num <= total:
+            return choice_num
+        print(f"Please enter a number between 0 and {total}.")
+
+
+def get_liked_page_action():
+    print("\n1. Scroll   2. Back to liked list")
+    while True:
+        choice = input("Choose an action (1-2): ").strip()
+        if choice == "1":
+            return "scroll"
+        elif choice == "2":
+            return "back"
+        print("Invalid input. Please enter 1 or 2.")
+
+
+def watch_liked_videos(liked_videos, start_index):
+    for index in range(start_index, len(liked_videos)):
+        display_video(liked_videos[index])
+        if get_liked_page_action() == "back":
+            return
+    print("\nYou've reached the end of your liked videos.")
+
+
+def show_liked_videos_page(liked_videos):
+    while True:
+        if not liked_videos:
+            print("\nYou haven't liked any videos yet.")
+            return
+        display_liked_list(liked_videos)
+        choice = get_liked_video_choice(len(liked_videos))
+        if choice == 0:
+            return
+        watch_liked_videos(liked_videos, choice - 1)
+
+
 def main():
     show_welcome_banner()
     interest = get_user_interest()
@@ -139,6 +190,8 @@ def main():
         elif action == "scroll":
             interests = get_interests(interest, liked_videos)
             current_video = get_next_video(queue, interests)
+        elif action == "liked_videos":
+            show_liked_videos_page(liked_videos)
         elif action == "close":
             break
 
