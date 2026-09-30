@@ -57,9 +57,9 @@ def get_user_interest():
 
 def get_next_action(is_liked):
     like_label = "Unlike" if is_liked else "Like"
-    print(f"\n1. {like_label}   2. Scroll   3. Liked videos   4. Close")
+    print(f"\n1. {like_label}   2. Scroll   3. Liked videos   4. Search   5. Close")
     while True:
-        choice = input("Choose an action (1-4): ").strip()
+        choice = input("Choose an action (1-5): ").strip()
         if choice == "1":
             return "like"
         elif choice == "2":
@@ -67,8 +67,10 @@ def get_next_action(is_liked):
         elif choice == "3":
             return "liked_videos"
         elif choice == "4":
+            return "search"
+        elif choice == "5":
             return "close"
-        print("Invalid input. Please enter 1, 2, 3, or 4.")
+        print("Invalid input. Please enter 1, 2, 3, 4, or 5.")
 
 
 def build_initial_queue(interest):
@@ -172,6 +174,134 @@ def show_liked_videos_page(liked_videos):
         watch_liked_videos(liked_videos, choice - 1)
 
 
+def display_search_results(matches, label):
+    print(f"\n--- {label} ---")
+    for number, video in enumerate(matches, start=1):
+        print(f"{number}. {video['title']} ({video['category']})")
+
+
+def get_search_result_choice(total):
+    while True:
+        choice = input(f"Enter a number (1-{total}) to watch it, or 0 to go back: ").strip()
+        if not choice.isdigit():
+            print("Invalid input. Please enter a number.")
+            continue
+        choice_num = int(choice)
+        if 0 <= choice_num <= total:
+            return choice_num
+        print(f"Please enter a number between 0 and {total}.")
+
+
+def get_search_result_action(is_liked):
+    like_label = "Unlike" if is_liked else "Like"
+    print(f"\n1. {like_label}   2. Scroll   3. Back to results")
+    while True:
+        choice = input("Choose an action (1-3): ").strip()
+        if choice == "1":
+            return "like"
+        elif choice == "2":
+            return "scroll"
+        elif choice == "3":
+            return "back"
+        print("Invalid input. Please enter 1, 2, or 3.")
+
+
+def watch_search_results(matches, start_index, liked_videos, original_interest):
+    index = start_index
+    while index < len(matches):
+        video = matches[index]
+        display_video(video)
+        action = get_search_result_action(video in liked_videos)
+        if action == "like":
+            interests_before = get_interests(original_interest, liked_videos)
+            toggle_like(video, liked_videos)
+            interests_after = get_interests(original_interest, liked_videos)
+            report_interest_changes(interests_before, interests_after)
+        elif action == "scroll":
+            index += 1
+        elif action == "back":
+            return
+    print("\nYou've reached the end of the search results.")
+
+
+def browse_search_results(matches, liked_videos, original_interest, label):
+    while True:
+        if not matches:
+            print("\nNo results found.")
+            return
+        display_search_results(matches, label)
+        choice = get_search_result_choice(len(matches))
+        if choice == 0:
+            return
+        watch_search_results(matches, choice - 1, liked_videos, original_interest)
+
+
+def run_keyword_search(liked_videos, original_interest):
+    while True:
+        keyword = input('\nEnter a keyword to search video titles (or 0 to go back): ').strip()
+        if keyword == "0":
+            return
+        if not keyword:
+            print("Please enter a keyword.")
+            continue
+        matches = [v for v in VIDEOS if keyword.lower() in v["title"].lower()]
+        if not matches:
+            print(f'No results found for "{keyword}".')
+            continue
+        matches.sort(key=lambda v: v["likes"], reverse=True)
+        browse_search_results(matches, liked_videos, original_interest, f'Results for "{keyword}"')
+
+
+def get_category_search_choice():
+    print("\nWhich category do you want to search?")
+    for index, category in enumerate(CATEGORIES, start=1):
+        print(f"{index}. {category}")
+    while True:
+        choice = input(f"Enter a number (1-{len(CATEGORIES)}), or 0 to go back: ").strip()
+        if not choice.isdigit():
+            print("Invalid input. Please enter a number.")
+            continue
+        choice_num = int(choice)
+        if 0 <= choice_num <= len(CATEGORIES):
+            return choice_num
+        print(f"Please enter a number between 0 and {len(CATEGORIES)}.")
+
+
+def run_category_search(liked_videos, original_interest):
+    while True:
+        choice = get_category_search_choice()
+        if choice == 0:
+            return
+        category = CATEGORIES[choice - 1]
+        matches = [v for v in VIDEOS if v["category"] == category]
+        matches.sort(key=lambda v: v["likes"], reverse=True)
+        browse_search_results(matches, liked_videos, original_interest, f"{category} videos")
+
+
+def get_search_mode():
+    print("\n1. Search by keyword   2. Search by category   3. Back to feed")
+    while True:
+        choice = input("Choose an option (1-3): ").strip()
+        if choice == "1":
+            return "keyword"
+        elif choice == "2":
+            return "category"
+        elif choice == "3":
+            return "back"
+        print("Invalid input. Please enter 1, 2, or 3.")
+
+
+def run_search(liked_videos, original_interest):
+    while True:
+        mode = get_search_mode()
+        if mode == "keyword":
+            run_keyword_search(liked_videos, original_interest)
+        elif mode == "category":
+            run_category_search(liked_videos, original_interest)
+        elif mode == "back":
+            return
+
+
 def main():
     show_welcome_banner()
     interest = get_user_interest()
@@ -192,6 +322,8 @@ def main():
             current_video = get_next_video(queue, interests)
         elif action == "liked_videos":
             show_liked_videos_page(liked_videos)
+        elif action == "search":
+            run_search(liked_videos, interest)
         elif action == "close":
             break
 
