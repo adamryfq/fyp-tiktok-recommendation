@@ -29,9 +29,10 @@ def show_welcome_banner():
     print("        Welcome to TikTok!")
     print("=" * 42)
     print("How to use:")
-    print(" - You'll pick an interest to get started")
+    print(" - PICK an interest to get started")
     print(" - LIKE a video to see more like it")
     print(" - SCROLL to see the next video")
+    print(" - SEARCH to look for a video")
     print(" - CLOSE to end your session")
     print("=" * 42)
 
@@ -328,7 +329,7 @@ def main():
             break
 
     print("\n=== Session ended ===")
-    print("Thanks for using the FYP simulator!")
+    print("Thanks for using the Tiktok FYP simulator!")
 
 
 if __name__ == "__main__":
